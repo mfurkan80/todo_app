@@ -1,11 +1,18 @@
-const express = require("express");
-const mysql = require("mysql2");
-const cors = require("cors");
-const path = require('path');
+import cors from "cors";
+import express from "express";
+import mysql from "mysql2";
+import { rateLimit } from 'express-rate-limit'
 
 const app = express();
 const port = 3000;
 
+const limiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 15 minutes
+    limit: 1, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+    message: { message: "Çok fazla istek attınız." }
+})
+
+app.use(limiter)
 app.use(cors());
 app.use(express.json());
 
@@ -28,6 +35,7 @@ app.get("/api/tasks", (req, res) => {
 
 
 app.post("/api/tasks", (req, res) => {
+
 
     if (req.body === undefined) {
         return res.status(400).json({
