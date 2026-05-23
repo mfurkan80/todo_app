@@ -28,10 +28,43 @@ app.get("/api/tasks", (req, res) => {
 
 
 app.post("/api/tasks", (req, res) => {
+
+    if (req.body === undefined) {
+        return res.status(400).json({
+            message: "Task boş olamaz."
+        })
+    }
+
     const newTask = req.body.title;
+
+    if (typeof newTask !== "string") {
+        return res.status(400).json({
+            message: "Geçerli task değildir."
+        })
+    }
+
+    if (newTask.length > 100) {
+        return res.status(400).json({
+            message: "Task 100 karakterden fazla olamaz."
+        })
+    }
+
+    if (newTask.length === 0) {
+        return res.status(400).json({
+            message: "Task boş olamaz."
+        })
+    }
+
     db.query("INSERT INTO tasks (title) VALUES (?)", [newTask], (err, result) => {
-        if (err) return res.status(500).json(err);
-        res.json({ message: "Görev eklendi", id: results.insertId });
+        if (err) return res.status(500).json({
+            message: "Bir sorun oluştu.",
+            data: {
+                error: err
+            }
+        });
+        res.json({
+            data: { taskId: result.insertId }
+        })
     });
 });
 
