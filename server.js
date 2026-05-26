@@ -9,7 +9,7 @@ const port = 3000;
 const limiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 15 minutes
     limit: 1000, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
-    message: { message: "Çok fazla istek attınız." }
+    message: { message: ERROR_CODES.MAX_RATE_LIMIT }
 })
 
 app.use(limiter)
@@ -30,7 +30,7 @@ app.get("/api/tasks", (req, res) => {
     db.query("SELECT * FROM tasks", (err, results) => {
         if (err) {
             return res.status(500).json({
-                message: "Beklenmedik bir hata oluştu."
+                message: ERROR_CODES.SERVER_ERROR
             });
         }
         res.json(results);
@@ -43,7 +43,7 @@ app.post("/api/tasks", (req, res) => {
 
     if (req.body === undefined) {
         return res.status(400).json({
-            message: "Task boş olamaz."
+            message: ERROR_CODES.TASK_NOT_VALID
         })
     }
 
@@ -51,25 +51,26 @@ app.post("/api/tasks", (req, res) => {
 
     if (typeof newTask !== "string") {
         return res.status(400).json({
-            message: "Geçerli task değildir."
+            message: ERROR_CODES.TASK_NOT_VALID
         })
     }
 
     if (newTask.length > 100) {
         return res.status(400).json({
-            message: "Task 100 karakterden fazla olamaz."
+            message: ERROR_CODES.TASK_MAX_SIZE_ERR_100
+            // TASK_MAX_SIZE_ERR_100
         })
     }
 
     if (newTask.length === 0) {
         return res.status(400).json({
-            message: "Task boş olamaz."
+            message: ERROR_CODES.TASK_NOT_VALID
         })
     }
 
     db.query("INSERT INTO tasks (title) VALUES (?)", [newTask], (err, result) => {
         if (err) return res.status(500).json({
-            message: "Bir sorun oluştu.",
+            message: ERROR_CODES.SERVER_ERROR,
             data: {
                 error: err
             }
@@ -85,26 +86,26 @@ app.delete("/api/tasks/:id", (req, res) => {
 
     if (isNaN(taskId)) {
         return res.status(400).json({
-            message: "Geçerli bir id girilmedi."
+            message: ERROR_CODES.ID_NOT_VALID
         });
     }
 
     if (taskId.length === 0) {
         return res.status(400).json({
-            message: "Bir id giriniz."
+            message: ERROR_CODES.ID_NOT_VALID
         })
     }
 
     db.query("DELETE FROM tasks WHERE id = ?", [taskId], (err, result) => {
         if (err) {
             return res.status(500).json({
-                message: "Bir sorun oluştu"
+                message: ERROR_CODES.SERVER_ERROR
             });
         };
 
         if (result.affectedRows === 0) {
             return res.status(400).json({
-                message: "Task bulunamadı."
+                message: ERROR_CODES.TASK_NOT_FOUND
             });
         };
 
@@ -117,13 +118,13 @@ app.patch("/api/tasks/:id", (req, res) => {
     const { is_completed } = req.body;
     if (isNaN(taskId)) {
         return res.status(400).json({
-            message: "Geçerli bir id girilmedi."
+            message: ERROR_CODES.ID_NOT_VALID
         })
     }
 
     if (typeof is_completed !== "boolean") {
         return res.status(400).json({
-            message: "hatalı"
+            message: ERROR_CODES.ERROR
         })
     }
 
@@ -133,13 +134,13 @@ app.patch("/api/tasks/:id", (req, res) => {
         (err, result) => {
             if (err) {
                 return res.status(500).json({
-                    message: "Bir sorun oluştu."
+                    message: ERROR_CODES.SERVER_ERROR
                 });
             };
 
             if (result.affectedRows === 0) {
                 return res.status(400).json({
-                    message: "Task bulunamadı."
+                    message: ERROR_CODES.TASK_NOT_FOUND
                 })
             };
 
