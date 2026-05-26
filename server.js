@@ -1,7 +1,9 @@
 import cors from "cors";
+import 'dotenv/config';
 import express from "express";
+import { rateLimit } from 'express-rate-limit';
 import mysql from "mysql2";
-import { rateLimit } from 'express-rate-limit'
+import ERROR_CODES from "./constants/error_code.js";
 
 const app = express();
 const port = 3000;
@@ -17,10 +19,10 @@ app.use(cors());
 app.use(express.json());
 
 const db = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "1905sahin",
-    database: "todo_db"
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE,
 });
 
 

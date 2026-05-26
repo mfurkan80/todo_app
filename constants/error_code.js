@@ -1,5 +1,3 @@
-/*const ERROR_CODES = ["TASK_NOT_FOUND"];*/
-
 const ERROR_CODES = {
     TASK_NOT_FOUND: "TASK_NOT_FOUND",
     SERVER_ERROR: "SERVER_ERROR",
@@ -9,3 +7,5 @@ const ERROR_CODES = {
     TASK_NOT_VALID: "TASK_NOT_VALID",
     MAX_RATE_LIMIT: "MAX_RATE_LIMIT"
 }
+
+export default ERROR_CODES;
