@@ -108,9 +108,7 @@ app.delete("/api/tasks/:id", (req, res) => {
             });
         };
 
-        res.json({
-            message: "Task silindi."
-        })
+        res.json()
     })
 });
 
@@ -145,9 +143,7 @@ app.patch("/api/tasks/:id", (req, res) => {
                 })
             };
 
-            res.json({
-                message: "Task tamamlandı."
-            })
+            res.json()
         }
     )
 });
