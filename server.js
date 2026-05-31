@@ -4,9 +4,21 @@ import express from "express";
 import { rateLimit } from 'express-rate-limit';
 import mysql from "mysql2";
 import ERROR_CODES from "./constants/error_code.js";
+import * as z from "zod";
 
 const app = express();
 const port = 3000;
+const createTaskSchema = z.object({
+    title:z.string({message: ERROR_CODES.TASK_NOT_VALID}).min(1, {message: ERROR_CODES.TASK_NOT_FOUND}).max(100, {message: ERROR_CODES.TASK_MAX_SIZE_ERR_100})
+})
+
+const taskIdSchema = z.object({
+    id: z.string({message: ERROR_CODES.ID_NOT_VALID}).min(1, {message: ERROR_CODES.ID_NOT_VALID}).refine((val) => !isNaN(Number(val)), {message: ERROR_CODES.ID_NOT_VALID})
+})
+
+const taskPatchSchema = z.object({
+    is_completed: z.boolean({message: ERROR_CODES.ERROR})
+})
 
 const limiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 15 minutes
@@ -42,33 +54,13 @@ app.get("/api/tasks", (req, res) => {
 
 app.post("/api/tasks", (req, res) => {
 
+    const result = createTaskSchema.safeParse(req.body);
 
-    if (req.body === undefined) {
-        return res.status(400).json({
-            message: ERROR_CODES.TASK_NOT_VALID
-        })
+    if (!result.success) {
+        return res.status(400).json({message: result.error.issues[0].message});
     }
 
-    const newTask = req.body.title;
-
-    if (typeof newTask !== "string") {
-        return res.status(400).json({
-            message: ERROR_CODES.TASK_NOT_VALID
-        })
-    }
-
-    if (newTask.length > 100) {
-        return res.status(400).json({
-            message: ERROR_CODES.TASK_MAX_SIZE_ERR_100
-            // TASK_MAX_SIZE_ERR_100
-        })
-    }
-
-    if (newTask.length === 0) {
-        return res.status(400).json({
-            message: ERROR_CODES.TASK_NOT_VALID
-        })
-    }
+    const newTask = result.data.title;
 
     db.query("INSERT INTO tasks (title) VALUES (?)", [newTask], (err, result) => {
         if (err) return res.status(500).json({
@@ -84,9 +76,15 @@ app.post("/api/tasks", (req, res) => {
 });
 
 app.delete("/api/tasks/:id", (req, res) => {
-    const taskId = req.params.id;
+    const result = taskIdSchema.safeParse(req.params);
 
-    if (isNaN(taskId)) {
+    if(!result.success){
+        return res.status(400).json({message: result.error.issues[0].message})
+    }
+
+    const taskId = result.data.id
+
+  /*  if (isNaN(taskId)) {
         return res.status(400).json({
             message: ERROR_CODES.ID_NOT_VALID
         });
@@ -96,7 +94,7 @@ app.delete("/api/tasks/:id", (req, res) => {
         return res.status(400).json({
             message: ERROR_CODES.ID_NOT_VALID
         })
-    }
+    }*/
 
     db.query("DELETE FROM tasks WHERE id = ?", [taskId], (err, result) => {
         if (err) {
@@ -116,19 +114,28 @@ app.delete("/api/tasks/:id", (req, res) => {
 });
 
 app.patch("/api/tasks/:id", (req, res) => {
-    const taskId = req.params.id;
-    const { is_completed } = req.body;
-    if (isNaN(taskId)) {
+    const paramsResult = taskIdSchema.safeParse(req.params)
+     if (!paramsResult.success) {
+        return res.status(400).json({ message: paramsResult.error.issues[0].message });
+    }
+    const bodyResult = taskPatchSchema.safeParse(req.body)
+    if (!bodyResult.success) {
+        return res.status(400).json({ message: bodyResult.error.issues[0].message });
+    }
+    const taskId = paramsResult.data.id;
+    const { is_completed } = bodyResult.data;
+    
+   /* if (isNaN(taskId)) {
         return res.status(400).json({
             message: ERROR_CODES.ID_NOT_VALID
         })
-    }
+    } */
 
-    if (typeof is_completed !== "boolean") {
+   /* if (typeof is_completed !== "boolean") {
         return res.status(400).json({
             message: ERROR_CODES.ERROR
         })
-    }
+    }*/
 
     db.query(
         "UPDATE tasks SET is_completed = ? WHERE id = ?",
