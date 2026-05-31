@@ -124,18 +124,6 @@ app.patch("/api/tasks/:id", (req, res) => {
     }
     const taskId = paramsResult.data.id;
     const { is_completed } = bodyResult.data;
-    
-   /* if (isNaN(taskId)) {
-        return res.status(400).json({
-            message: ERROR_CODES.ID_NOT_VALID
-        })
-    } */
-
-   /* if (typeof is_completed !== "boolean") {
-        return res.status(400).json({
-            message: ERROR_CODES.ERROR
-        })
-    }*/
 
     db.query(
         "UPDATE tasks SET is_completed = ? WHERE id = ?",
