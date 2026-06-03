@@ -8,6 +8,10 @@ const fetchTasks = async () => {
     tasks.forEach(task => {
         const li = document.createElement("li");
 
+        if (task.is_completed) {
+            li.classList.add("completed");
+        }
+
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.checked = !!task.is_completed;
@@ -21,7 +25,7 @@ const fetchTasks = async () => {
         }
 
         const deleteBtn = document.createElement("button");
-        deleteBtn.textContent = "Sil";
+        deleteBtn.textContent = "Delete";
         deleteBtn.onclick = () => deleteTask(task.id);
 
         li.appendChild(checkbox);
@@ -35,12 +39,12 @@ const addTask = async () => {
     const input = document.getElementById("taskInput");
     const title = input.value;
 
-    if (!title) return;
+    if (!title.trim()) return;
 
     await fetch("http://localhost:3000/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title })
+        body: JSON.stringify({ title: title})
     });
 
     input.value = "";
