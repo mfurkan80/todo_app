@@ -1,5 +1,5 @@
 const fetchTasks = async () => {
-    const res = await fetch("http://localhost:3000/api/tasks");
+    const res = await fetch("/api/tasks");
     const tasks = await res.json();
 
     const taskList = document.getElementById("taskList");
@@ -41,7 +41,7 @@ const addTask = async () => {
 
     if (!title.trim()) return;
 
-    await fetch("http://localhost:3000/api/tasks", {
+    await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: title})
@@ -53,7 +53,7 @@ const addTask = async () => {
 };
 
 const toggleTask = async (id, completed) => {
-    await fetch(`http://localhost:3000/api/tasks/${id}`, {
+    await fetch(`/api/tasks/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_completed: completed })
@@ -62,7 +62,7 @@ const toggleTask = async (id, completed) => {
 };
 
 const deleteTask = async (id) => {
-    await fetch(`http://localhost:3000/api/tasks/${id}`, {
+    await fetch(`/api/tasks/${id}`, {
         method: "DELETE"
     });
     fetchTasks();
