@@ -18,6 +18,25 @@ const createTaskSchema = z.object({
     .max(100, { message: ERROR_CODES.TASK_MAX_SIZE_ERR_100 }),
 });
 
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: ERROR_CODES.UNATUHTORIZED });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decodedUser) => {
+    if (err) {
+      return res.status(403).json({ message: ERROR_CODES.UNATUHTORIZED });
+    }
+
+    req.user = decodedUser;
+
+    next();
+  });
+};
+
 const taskIdSchema = z.object({
   id: z
     .string({ message: ERROR_CODES.ID_NOT_VALID })
@@ -62,6 +81,7 @@ app.post("/register", async (req, res) => {
         console.log("Kayıt hatası: ", err);
         return res.status(500).json({ message: ERROR_CODES.REGISTER_ERROR });
       }
+      res.status(201).send();
     });
   } catch (error) {
     console.log(error);
@@ -103,18 +123,23 @@ app.post("/login", (req, res) => {
   });
 });
 
-app.get("/api/tasks", (req, res) => {
-  db.query("SELECT * FROM tasks", (err, results) => {
-    if (err) {
-      return res.status(500).json({
-        message: ERROR_CODES.SERVER_ERROR,
-      });
-    }
-    res.json(results);
-  });
+app.get("/api/tasks", verifyToken, (req, res) => {
+  const userId = req.user.id;
+  db.query(
+    "SELECT * FROM tasks WHERE user_id = ?",
+    [userId],
+    (err, results) => {
+      if (err) {
+        return res.status(500).json({
+          message: ERROR_CODES.SERVER_ERROR,
+        });
+      }
+      res.json(results);
+    },
+  );
 });
 
-app.post("/api/tasks", (req, res) => {
+app.post("/api/tasks", verifyToken, (req, res) => {
   const result = createTaskSchema.safeParse(req.body);
 
   if (!result.success) {
@@ -122,22 +147,27 @@ app.post("/api/tasks", (req, res) => {
   }
 
   const newTask = result.data.title;
+  const userId = req.user.id;
 
-  db.query("INSERT INTO tasks (title) VALUES (?)", [newTask], (err, result) => {
-    if (err)
-      return res.status(500).json({
-        message: ERROR_CODES.SERVER_ERROR,
-        data: {
-          error: err,
-        },
+  db.query(
+    "INSERT INTO tasks (title, user_id) VALUES (?, ?)",
+    [newTask, userId],
+    (err, result) => {
+      if (err)
+        return res.status(500).json({
+          message: ERROR_CODES.SERVER_ERROR,
+          data: {
+            error: err,
+          },
+        });
+      res.json({
+        data: { taskId: result.insertId },
       });
-    res.json({
-      data: { taskId: result.insertId },
-    });
-  });
+    },
+  );
 });
 
-app.delete("/api/tasks/:id", (req, res) => {
+app.delete("/api/tasks/:id", verifyToken, (req, res) => {
   const result = taskIdSchema.safeParse(req.params);
 
   if (!result.success) {
@@ -145,37 +175,30 @@ app.delete("/api/tasks/:id", (req, res) => {
   }
 
   const taskId = result.data.id;
+  const userId = req.user.id;
 
-  /*  if (isNaN(taskId)) {
-        return res.status(400).json({
-            message: ERROR_CODES.ID_NOT_VALID
+  db.query(
+    "DELETE FROM tasks WHERE id = ? AND user_id = ?",
+    [taskId, userId],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({
+          message: ERROR_CODES.SERVER_ERROR,
         });
-    }
+      }
 
-    if (taskId.length === 0) {
+      if (result.affectedRows === 0) {
         return res.status(400).json({
-            message: ERROR_CODES.ID_NOT_VALID
-        })
-    }*/
+          message: ERROR_CODES.TASK_NOT_FOUND,
+        });
+      }
 
-  db.query("DELETE FROM tasks WHERE id = ?", [taskId], (err, result) => {
-    if (err) {
-      return res.status(500).json({
-        message: ERROR_CODES.SERVER_ERROR,
-      });
-    }
-
-    if (result.affectedRows === 0) {
-      return res.status(400).json({
-        message: ERROR_CODES.TASK_NOT_FOUND,
-      });
-    }
-
-    res.json();
-  });
+      res.json();
+    },
+  );
 });
 
-app.patch("/api/tasks/:id", (req, res) => {
+app.patch("/api/tasks/:id", verifyToken, (req, res) => {
   const paramsResult = taskIdSchema.safeParse(req.params);
   if (!paramsResult.success) {
     return res
@@ -190,10 +213,11 @@ app.patch("/api/tasks/:id", (req, res) => {
   }
   const taskId = paramsResult.data.id;
   const { is_completed } = bodyResult.data;
+  const userId = req.user.id;
 
   db.query(
-    "UPDATE tasks SET is_completed = ? WHERE id = ?",
-    [is_completed, taskId],
+    "UPDATE tasks SET is_completed = ? WHERE id = ? AND user_id = ?",
+    [is_completed, taskId, userId],
     (err, result) => {
       if (err) {
         return res.status(500).json({
