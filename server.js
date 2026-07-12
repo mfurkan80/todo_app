@@ -6,6 +6,7 @@ import mysql from "mysql2";
 import ERROR_CODES from "./constants/error_code.js";
 import * as z from "zod";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 const app = express();
 const port = 3000;
@@ -65,6 +66,31 @@ app.post("/register", async (req, res) => {
     console.log(error);
     res.status(500).json({ message: ERROR_CODES.SERVER_ERROR });
   }
+});
+
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
+  const sql = "SELECT * FROM users WHERE email = ?";
+
+  db.query(sql, [email], async (err, resulst) => {
+    if (err) return res.status(500).json({ message: ERROR_CODES.SERVER_ERROR });
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: ERROR_CODES.USER_NOT_FOUND });
+    }
+
+    const user = resulst[0];
+
+    const passCorrect = await bcrypt.compare(password, hashedPassword);
+
+    if (!passCorrect) {
+      return res.status(401).json({ message: ERROR_CODES.INCORRECT_PASSWORD });
+    }
+
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+  });
 });
 
 app.get("/api/tasks", (req, res) => {
