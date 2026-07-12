@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 const app = express();
+app.set("trust proxy", 1);
 const port = 3000;
 const createTaskSchema = z.object({
   title: z
@@ -72,24 +73,33 @@ app.post("/login", (req, res) => {
   const { email, password } = req.body;
   const sql = "SELECT * FROM users WHERE email = ?";
 
-  db.query(sql, [email], async (err, resulst) => {
+  db.query(sql, [email], async (err, results) => {
     if (err) return res.status(500).json({ message: ERROR_CODES.SERVER_ERROR });
 
     if (results.length === 0) {
       return res.status(404).json({ message: ERROR_CODES.USER_NOT_FOUND });
     }
 
-    const user = resulst[0];
+    try {
+      const user = results[0];
+      const passCorrect = await bcrypt.compare(password, user.password);
 
-    const passCorrect = await bcrypt.compare(password, hashedPassword);
+      if (!passCorrect) {
+        return res
+          .status(401)
+          .json({ message: ERROR_CODES.INCORRECT_PASSWORD });
+      }
 
-    if (!passCorrect) {
-      return res.status(401).json({ message: ERROR_CODES.INCORRECT_PASSWORD });
+      const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+      res.status(200).json({
+        token: token,
+      });
+    } catch (error) {
+      console.log("Login hatası:", error);
+      res.status(500).json({ message: ERROR_CODES.SERVER_ERROR });
     }
-
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
   });
 });
 
