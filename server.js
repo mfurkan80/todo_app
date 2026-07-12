@@ -5,8 +5,8 @@ import { rateLimit } from "express-rate-limit";
 import mysql from "mysql2";
 import ERROR_CODES from "./constants/error_code.js";
 import * as z from "zod";
+import bcrypt from "bcryptjs";
 
-const bcrypt = require("bcryptjs");
 const app = express();
 const port = 3000;
 const createTaskSchema = z.object({
