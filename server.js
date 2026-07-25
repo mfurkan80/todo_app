@@ -10,7 +10,10 @@ import jwt from "jsonwebtoken";
 
 const app = express();
 app.set("trust proxy", 1);
-const port = 3000;
+
+// PORT ayarını esnek yaptık (Dokploy PORT atarsa onu kullanır, yoksa 3000)
+const port = process.env.PORT || 3000;
+
 const createTaskSchema = z.object({
   title: z
     .string({ message: ERROR_CODES.TASK_NOT_VALID })
@@ -30,9 +33,7 @@ const verifyToken = (req, res, next) => {
     if (err) {
       return res.status(403).json({ message: ERROR_CODES.UNATUHTORIZED });
     }
-
     req.user = decodedUser;
-
     next();
   });
 };
@@ -51,8 +52,8 @@ const taskPatchSchema = z.object({
 });
 
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 15 minutes
-  limit: 1000, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+  windowMs: 1 * 60 * 1000, // 1 minute
+  limit: 1000,
   message: { message: ERROR_CODES.MAX_RATE_LIMIT },
 });
 
@@ -60,11 +61,24 @@ app.use(limiter);
 app.use(cors());
 app.use(express.json());
 
+// Veritabanı bağlantısı oluşturuluyor
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
+});
+
+// KRİTİK EKLENTİ: Veritabanı bağlantısını test et ve hataları yakala
+db.connect((err) => {
+  if (err) {
+    console.error("❌ Veritabanı bağlantı hatası:", err.message);
+    console.error(
+      "Lütfen Dokploy üzerindeki DB_HOST, DB_USER, DB_PASSWORD ve DB_DATABASE değişkenlerini kontrol et.",
+    );
+  } else {
+    console.log("✅ MySQL veritabanına başarıyla bağlanıldı!");
+  }
 });
 
 app.use(express.static("public"));
@@ -237,5 +251,5 @@ app.patch("/api/tasks/:id", verifyToken, (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log("Port dinleniyor:", port);
+  console.log(`🚀 Sunucu ${port} portunda başarıyla başlatıldı.`);
 });
