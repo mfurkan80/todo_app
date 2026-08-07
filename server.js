@@ -5,6 +5,7 @@ import "./config/db.js";
 import { limiter } from "./middlewares/rate-limiter.js";
 import authRoutes from "./routes/auth.js";
 import taskRoutes from "./routes/task.js";
+import profileRoutes from "./routes/profile.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -16,6 +17,7 @@ app.use(limiter);
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
+app.use("/api/profile", profileRoutes);
 
 // Rotalar (Routes)
 app.use("/", authRoutes); // /register ve /login buraya düşecek
