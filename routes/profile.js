@@ -50,7 +50,6 @@ router.put("/", authenticateToken, (req, res) => {
         .json({ message: "Current password is required to change password." });
     }
 
-    // Veritabanından mevcut şifreyi çek (doğrulamak için)
     db.query(
       "SELECT password FROM users WHERE id = ?",
       [userId],
@@ -66,28 +65,43 @@ router.put("/", authenticateToken, (req, res) => {
             .json({ message: "Incorrect current password." });
         }
 
-        // Şifre doğruysa yeni şifreyi hash'le ve kaydet
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
         const updateSql =
           "UPDATE users SET email = ?, password = ? WHERE id = ?";
         db.query(updateSql, [email, hashedPassword, userId], (updateErr) => {
-          if (updateErr)
+          if (updateErr) {
+            // MySQL "Çift Kayıt" hatasını yakalıyoruz
+            if (updateErr.code === "ER_DUP_ENTRY") {
+              return res
+                .status(400)
+                .json({ message: "This email is already in use." });
+            }
+            console.error("Database update error: ", updateErr);
             return res
               .status(500)
               .json({ message: "Failed to update profile." });
+          }
           res.status(200).json({ email });
         });
       },
     );
   }
-  // 2. Durum: Sadece email değiştiriliyor (Şifre alanları boş)
+  // 2. Durum: Sadece email değiştiriliyor
   else {
     const sql = "UPDATE users SET email = ? WHERE id = ?";
     db.query(sql, [email, userId], (err) => {
-      if (err)
+      if (err) {
+        // MySQL "Çift Kayıt" hatasını yakalıyoruz
+        if (err.code === "ER_DUP_ENTRY") {
+          return res
+            .status(400)
+            .json({ message: "This email is already in use." });
+        }
+        console.error("Database update error: ", err);
         return res.status(500).json({ message: "Failed to update profile." });
+      }
       res.status(200).json({ email });
     });
   }
